@@ -10,6 +10,7 @@ from urllib.error import URLError
 from http.client import BadStatusLine
 import json
 import sys
+import json
 
 
 # cookbook function for api authentication
@@ -96,7 +97,7 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
     # keyword arguments
     
     # See https://dev.twitter.com/docs/api/1.1/get/search/tweets    
-    search_results = twitter_api.search.tweets(q=q, count=100, **kw)
+    search_results = twitter_api.search.tweets(q=q, count=1000, **kw)
     
     statuses = search_results['statuses']
     
@@ -110,6 +111,9 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
     # Enforce a reasonable limit
     max_results = min(1000, max_results)
     
+    output = []
+    output.append(search_results)
+
     for _ in range(10): # 10*100 = 1000
         try:
             next_results = search_results['search_metadata']['next_results']
@@ -124,8 +128,13 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
         search_results = twitter_api.search.tweets(**kwargs)
         statuses += search_results['statuses']
         
+        output.append(search_results)
+
         if len(statuses) > max_results: 
             break
+    
+    with open('data.json', 'w', encoding='utf-8') as f:
+        json.dump(output, f, ensure_ascii=False, indent=4)
             
     return statuses
 
