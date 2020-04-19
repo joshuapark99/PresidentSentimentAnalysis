@@ -89,7 +89,7 @@ def make_twitter_request(twitter_api_func, max_errors=10, *args, **kw):
                 print("Too many consecutive errors...bailing out.", file=sys.stderr)
                 raise
 
-def twitter_search(twitter_api, q, max_results=200, **kw):
+def twitter_search(twitter_api, q, max_results=10000, **kw):
 
     # See https://developer.twitter.com/en/docs/tweets/search/api-reference/get-search-tweets
     # and https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators
@@ -97,7 +97,7 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
     # keyword arguments
     
     # See https://dev.twitter.com/docs/api/1.1/get/search/tweets    
-    search_results = twitter_api.search.tweets(q=q, count=1000, **kw)
+    search_results = twitter_api.search.tweets(q=q, count=10000, **kw)
     
     statuses = search_results['statuses']
     
@@ -108,13 +108,15 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
     # for details. A reasonable number of results is ~1000, although
     # that number of results may not exist for all queries.
     
-    # Enforce a reasonable limit
-    max_results = min(1000, max_results)
+    # # Enforce a reasonable limit
+    # max_results = min(10000, max_results)
     
+    count = 0
     output = []
     output.append(search_results)
 
-    for _ in range(10): # 10*100 = 1000
+    for _ in range(max_results//100): # 10*100 = 1000
+        print(len(output))
         try:
             next_results = search_results['search_metadata']['next_results']
         except KeyError as e: # No more results when next_results doesn't exist
@@ -132,10 +134,14 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
 
         if len(statuses) > max_results: 
             break
-    
-    with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(output, f, ensure_ascii=False, indent=4)
+        
+        if len(output) == 10:
+            with open('./output/data{}.json'.format(count), 'w', encoding='utf-8') as f:
+                json.dump(output, f, ensure_ascii=False, indent=4)
+            output = []
+            count += 1
             
+    
     return statuses
 
 # Sample usage
@@ -143,4 +149,4 @@ def twitter_search(twitter_api, q, max_results=200, **kw):
 twitter_api = oauth_login()
 
 q = "Trump"
-results = twitter_search(twitter_api, q, max_results=1000)
+results = twitter_search(twitter_api, q, max_results=10000)
