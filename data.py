@@ -97,7 +97,8 @@ def twitter_search(twitter_api, q, max_results=10000, **kw):
     # keyword arguments
     
     # See https://dev.twitter.com/docs/api/1.1/get/search/tweets    
-    search_results = twitter_api.search.tweets(q=q, count=10000, **kw)
+    search_results = twitter_api.search.tweets(q=q, count=10000, tweet_mode='extended', **kw)
+
     
     statuses = search_results['statuses']
     
@@ -108,12 +109,8 @@ def twitter_search(twitter_api, q, max_results=10000, **kw):
     # for details. A reasonable number of results is ~1000, although
     # that number of results may not exist for all queries.
     
-    # # Enforce a reasonable limit
-    # max_results = min(10000, max_results)
-    
     count = 0
     output = []
-    output.append(search_results)
 
     for _ in range(max_results//100): # 10*100 = 1000
         print(len(output))
@@ -122,26 +119,25 @@ def twitter_search(twitter_api, q, max_results=10000, **kw):
         except KeyError as e: # No more results when next_results doesn't exist
             break
             
-        # Create a dictionary from next_results, which has the following form:
-        # ?max_id=313519052523986943&q=NCAA&include_entities=1
         kwargs = dict([ kv.split('=') 
                         for kv in next_results[1:].split("&") ])
         
-        search_results = twitter_api.search.tweets(**kwargs)
+        search_results = twitter_api.search.tweets(tweet_mode='extended', **kwargs )
         statuses += search_results['statuses']
-        
-        output.append(search_results)
+    
 
+        for tweet in search_results['statuses']:
+            output.append({
+                'text': tweet['full_text'],
+                'geo': tweet['geo']
+            })
+        
         if len(statuses) > max_results: 
             break
-        
-        if len(output) == 10:
-            with open('./output/data{}.json'.format(count), 'w', encoding='utf-8') as f:
-                json.dump(output, f, ensure_ascii=False, indent=4)
-            output = []
-            count += 1
-            
-    
+          
+    with open('./output/data.json', 'w', encoding='utf-8') as f:
+        json.dump(output, f, ensure_ascii=False, indent=4)
+
     return statuses
 
 # Sample usage
